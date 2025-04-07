@@ -11,6 +11,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { ColorScheme, VisualizationMode } from "@/types";
 
 export default function ControlPanel() {
   const [collapsed, setCollapsed] = useState(false);
@@ -20,7 +21,7 @@ export default function ControlPanel() {
   const toggleCollapse = () => setCollapsed(!collapsed);
 
   const handleModeChange = (selectedMode: string) => {
-    setMode(selectedMode as 'harmonograph' | 'waveform' | 'particles' | 'fractal');
+    setMode(selectedMode as VisualizationMode);
   };
   
   const handleInputChange = (value: string) => {
@@ -28,7 +29,7 @@ export default function ControlPanel() {
   };
 
   const handleColorSchemeChange = (scheme: string) => {
-    setColorScheme(scheme);
+    setColorScheme(scheme as ColorScheme);
   };
 
   const handleParamChange = (param: string, value: number[]) => {
