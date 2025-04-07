@@ -327,7 +327,9 @@ export class ChordDetector {
     
     for (const rootNote of rootsToTry) {
       // Try both versions of the note name (e.g., A# and Bb)
-      const rootVariants = rootNote && rootNote.includes('/') ? rootNote.split('/') : [rootNote || ''];
+      const rootVariants = rootNote && typeof rootNote === 'string' && rootNote.includes('/') 
+        ? rootNote.split('/') 
+        : [rootNote || ''];
       
       for (const root of rootVariants) {
         for (const [suffix, formula] of Object.entries(CHORD_FORMULAS)) {
@@ -340,8 +342,8 @@ export class ChordDetector {
           
           // Check each detected note to see if it exists in the expected chord
           for (let i = 0; i < baseNotes.length; i++) {
-            const note = baseNotes[i];
-            const noteVariants = note.includes('/') ? note.split('/') : [note];
+            const note = baseNotes[i] || '';
+            const noteVariants = typeof note === 'string' && note.includes('/') ? note.split('/') : [note];
             
             // Check if any variant of this note exists in expected notes
             let noteMatched = false;
@@ -373,8 +375,9 @@ export class ChordDetector {
               let found = false;
               
               for (const note of baseNotes) {
-                const variants = note.includes('/') ? note.split('/') : [note];
-                if (variants.includes(noteForInterval)) {
+                const noteStr = note || '';
+                const variants = typeof noteStr === 'string' && noteStr.includes('/') ? noteStr.split('/') : [noteStr];
+                if (noteForInterval && variants.includes(noteForInterval)) {
                   found = true;
                   break;
                 }
@@ -409,7 +412,8 @@ export class ChordDetector {
     
     // If no chord is identified, just return the first note
     // Clean up the name (prefer simpler names without accidental variations)
-    const cleanName = notes[0].name.includes('/') ? notes[0].name.split('/')[0] : notes[0].name;
+    const noteName = notes[0]?.name || '';
+    const cleanName = noteName.includes?.('/') ? noteName.split('/')[0] : noteName;
     return { 
       name: cleanName,
       formula: "1"
@@ -424,7 +428,7 @@ export class ChordDetector {
     }
     
     // Simplify root if it has enharmonic equivalent
-    const root = rootNote.includes('/') ? rootNote.split('/')[0] : rootNote;
+    const root = typeof rootNote === 'string' && rootNote.includes('/') ? rootNote.split('/')[0] : rootNote;
     
     // Calculate the semitone index of the root note
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
