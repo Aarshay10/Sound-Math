@@ -29,7 +29,20 @@ export class Fractal {
   }
 
   setChordFrequencies(frequencies: number[]): void {
+    // Apply dynamic changes based on frequencies
     this.chordFrequencies = frequencies;
+    
+    // Only update visualization parameters if we have frequencies
+    if (frequencies.length > 0) {
+      // Calculate average frequency to affect complexity
+      const avgFreq = frequencies.reduce((sum, freq) => sum + freq, 0) / frequencies.length;
+      
+      // Map it to a reasonable range (30-440 Hz is typical for basic notes)
+      const normalizedFreq = Math.min(Math.max((avgFreq - 80) / 360, 0), 1);
+      
+      // Adjust complexity based on frequency - higher notes should produce more complex patterns
+      this.complexity = 40 + normalizedFreq * 60;
+    }
   }
 
   start(): void {
@@ -45,7 +58,7 @@ export class Fractal {
   }
 
   private animate(): void {
-    this.time += 0.01;
+    this.time += 0.03; // Increased speed for more movement
     this.draw();
     this.animationId = requestAnimationFrame(() => this.animate());
   }

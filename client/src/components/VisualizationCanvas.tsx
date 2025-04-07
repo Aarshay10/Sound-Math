@@ -125,62 +125,136 @@ export default function VisualizationCanvas() {
       ctx.stroke();
     };
 
+    // Define particle interface
+    interface Particle {
+      x: number;
+      y: number;
+      size: number;
+      amplitude: number;
+      speedFactor?: number;
+    }
+    
     // Particle visualization
     const drawParticles = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       const freqData = audioData.frequencyData || new Uint8Array(1024);
-      const particles = [];
-      const particleCount = 50 + Math.floor(params.complexity);
+      const particles: Particle[] = [];
       
+      // Reduce particle count to make it less cluttered
+      const particleCount = 20 + Math.floor(params.complexity / 2);
+      
+      // Get chord frequency data for more dynamic movement
+      const chordFrequencies = detectedChord.frequencies || [];
+      
+      // Create particles
       for (let i = 0; i < particleCount; i++) {
-        const index = Math.floor(i / particleCount * freqData.length);
-        const amplitude = freqData[index] / 255.0;
+        // Use specific frequency ranges for better visual mapping
+        const freqIndex = Math.floor(i / particleCount * (freqData.length / 2));
         
-        const size = 2 + (amplitude * 10 * params.sensitivity / 100);
-        const x = canvas.width / 2 + Math.cos(i / particleCount * Math.PI * 2 + time) * (100 + amplitude * 200);
-        const y = canvas.height / 2 + Math.sin(i / particleCount * Math.PI * 2 + time) * (100 + amplitude * 200);
+        // More responsive amplitude calculation
+        const amplitude = Math.pow(freqData[freqIndex] / 255.0, 1.2); // Non-linear response
         
-        particles.push({ x, y, size, amplitude });
+        // Larger particle sizes
+        const baseSizeFactor = 3.5; // Increased base size
+        const sizeFactor = 15 * (params.sensitivity / 100); // More sensitive to controls
+        const size = baseSizeFactor + (amplitude * sizeFactor);
+        
+        // More dynamic movements based on chord frequencies and time
+        let orbitSize = 120 + amplitude * 250;
+        let speedFactor = 1.0;
+        
+        // If we have chord data, use it to influence the particle behavior
+        if (chordFrequencies.length > 0) {
+          const freqInfluence = chordFrequencies[i % chordFrequencies.length] / 440; // A4 reference
+          orbitSize = 100 + amplitude * 200 * freqInfluence;
+          speedFactor = 0.8 + (freqInfluence % 1) * 0.8;
+        }
+        
+        // Calculate position with more organic movement
+        const angle = (i / particleCount * Math.PI * 2) + (time * speedFactor);
+        const wobble = Math.sin(time * 0.5 + i) * 10 * amplitude;
+        
+        const x = canvas.width / 2 + Math.cos(angle) * (orbitSize + wobble);
+        const y = canvas.height / 2 + Math.sin(angle) * (orbitSize + wobble);
+        
+        particles.push({ x, y, size, amplitude, speedFactor });
       }
+      
+      // Draw connections first (behind particles for better layering)
+      ctx.strokeStyle = colorScheme === 'default' ? colors.accent : colors.secondary;
+      ctx.lineWidth = 0.8; // Slightly thicker lines
+      
+      // Connect fewer particles to reduce clutter
+      const connectionDistance = 150; // Larger distance threshold
+      const maxConnections = 3; // Limit connections per particle
+      
+      for (let i = 0; i < particles.length; i++) {
+        let connectionCount = 0;
+        
+        // Sort nearest particles for better connection patterns
+        interface NearbyParticle {
+          particle: Particle;
+          distance: number;
+        }
+        
+        const nearbyParticles: NearbyParticle[] = particles.slice()
+          .filter((p, idx) => idx !== i)
+          .map(p => {
+            const dx = particles[i].x - p.x;
+            const dy = particles[i].y - p.y;
+            return { particle: p, distance: Math.sqrt(dx * dx + dy * dy) };
+          })
+          .filter(p => p.distance < connectionDistance)
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, maxConnections);
+          
+        // Draw connections to nearest particles
+        for (const nearby of nearbyParticles) {
+          const opacity = 1 - (nearby.distance / connectionDistance);
+          ctx.globalAlpha = opacity * 0.7; // Slightly more transparent
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(nearby.particle.x, nearby.particle.y);
+          ctx.stroke();
+          
+          connectionCount++;
+          if (connectionCount >= maxConnections) break;
+        }
+      }
+      
+      // Reset opacity for particles
+      ctx.globalAlpha = 1;
       
       // Draw particles
       particles.forEach((particle) => {
+        // Add glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = colorScheme === 'default' ? colors.secondary : colors.primary;
+        
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         
+        // More vibrant gradients
         const gradient = ctx.createRadialGradient(
           particle.x, particle.y, 0,
           particle.x, particle.y, particle.size
         );
         
-        gradient.addColorStop(0, colorScheme === 'default' ? colors.secondary : colors.primary);
-        gradient.addColorStop(1, 'transparent');
+        // Color based on color scheme with better transitions
+        const innerColor = colorScheme === 'default' ? colors.secondary : colors.primary;
+        const outerColor = colorScheme === 'default' ? 'rgba(78, 205, 196, 0.1)' : 'rgba(96, 66, 166, 0.1)';
+        
+        gradient.addColorStop(0, innerColor);
+        gradient.addColorStop(0.6, innerColor + '80'); // Semi-transparent
+        gradient.addColorStop(1, outerColor);
         
         ctx.fillStyle = gradient;
         ctx.fill();
+        
+        // Reset shadow for next particle
+        ctx.shadowBlur = 0;
       });
-      
-      // Connect particles with lines
-      ctx.strokeStyle = colorScheme === 'default' ? colors.accent : colors.secondary;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance < 100) {
-            ctx.globalAlpha = 1 - (distance / 100);
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
       
       ctx.globalAlpha = 1;
     };

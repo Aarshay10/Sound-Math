@@ -69,7 +69,8 @@ export class Harmonograph {
   }
 
   private animate(): void {
-    this.time += 0.01;
+    // Increase animation speed slightly for more dynamic movement
+    this.time += 0.015;
     this.draw();
     this.animationId = requestAnimationFrame(() => this.animate());
   }
@@ -150,40 +151,77 @@ export class Harmonograph {
   updateFromChord(frequencies: number[]): void {
     if (frequencies.length === 0) return;
 
-    // Normalize frequencies to usable ranges for the visualization
-    const normalizeFreq = (freq: number) => {
-      // Map frequency (typically 80-1000 Hz for guitar) to 1.0-4.0 range
-      return 1.0 + (Math.min(Math.max(freq, 80), 1000) - 80) / 920 * 3.0;
+    // More sophisticated frequency normalization
+    const normalizeFreq = (freq: number, minRange = 1.0, maxRange = 4.5) => {
+      // Map frequency with logarithmic scaling for more musical response
+      // Guitar frequencies are typically 80-1200 Hz (low E to high E 3rd octave)
+      const minFreq = 80;
+      const maxFreq = 1200;
+      const logMin = Math.log(minFreq);
+      const logMax = Math.log(maxFreq);
+      const logFreq = Math.log(Math.max(freq, minFreq));
+      
+      // Get normalized position in logarithmic scale (0-1)
+      const normalizedLog = (logFreq - logMin) / (logMax - logMin);
+      
+      // Map to desired range with exponential curve for more dynamic visual changes
+      return minRange + Math.pow(normalizedLog, 1.5) * (maxRange - minRange);
     };
 
-    // Get up to 3 frequencies
+    // Get frequencies, ensuring we have at least 4 values even if we need to repeat
     const freq1 = frequencies[0] || 440;
     const freq2 = frequencies[1] || freq1 * 1.5;
     const freq3 = frequencies[2] || freq1 * 2;
+    const freq4 = frequencies[3] || freq2 * 1.25;
 
-    // Calculate frequency ratios
+    // Calculate musical ratios - these create more harmonically interesting patterns
     const ratio1 = freq1 / 440; // A4 reference
-    const ratio2 = freq2 / freq1;
-    const ratio3 = freq3 / freq1;
+    const ratio2 = freq2 / freq1; // interval between first and second note
+    const ratio3 = freq3 / freq1; // interval between first and third note
+    const ratio4 = freq4 / freq1; // interval between first and fourth note
 
-    // Update harmonograph settings based on detected frequencies
+    // Introduce the golden ratio for more pleasing visual patterns
+    const golden = 1.618033988749895;
+    const phi = (Math.sqrt(5) + 1) / 2; // Another expression of golden ratio 
+
+    // Calculate frequency complexity - how "spread out" the frequencies are
+    const uniqueFreqCount = new Set(frequencies.map(f => Math.round(f))).size;
+    const complexityFactor = Math.min(uniqueFreqCount / 3, 1); // 0-1 range
+
+    // Calculate musical dissonance based on frequency ratios
+    // Perfect fifth (1.5) and octave (2.0) are consonant, other ratios can be dissonant
+    const dissonanceFactor = Math.min(
+      Math.abs(ratio2 - 1.5) + Math.abs(ratio3 - 2.0), 
+      1
+    );
+
+    // Base frequency settings on musical properties
+    const baseFreq1 = normalizeFreq(freq1, 1.0, 3.0);
+    const baseFreq2 = normalizeFreq(freq2, 1.0, 3.0);
+
+    // Update harmonograph settings with more expressive parameters
     this.updateSettings({
-      frequency1: normalizeFreq(freq1),
-      frequency2: normalizeFreq(freq1) * 1.01, // Slight detuning creates interesting patterns
-      frequency3: normalizeFreq(freq2),
-      frequency4: normalizeFreq(freq3),
+      // Add slight detuning and time-based modulation for more organic feel
+      frequency1: baseFreq1 + Math.sin(this.time * 0.05) * 0.05,
+      frequency2: baseFreq1 * (1 + 0.01 * complexityFactor) + Math.sin(this.time * 0.06) * 0.06,
+      frequency3: baseFreq2 + Math.sin(this.time * 0.03) * 0.04,
+      frequency4: baseFreq2 * phi + Math.sin(this.time * 0.04) * 0.03,
       
-      // Phase shifts based on frequency relationships
-      phase1: Math.PI / 4,
-      phase2: Math.PI * (ratio1 % 1),
-      phase3: Math.PI * (ratio2 % 1),
-      phase4: Math.PI * (ratio3 % 1),
+      // More dynamic phase relationships based on ratios and time
+      phase1: Math.PI * (ratio1 % 1) + Math.sin(this.time * 0.02) * 0.1,
+      phase2: Math.PI * (ratio2 % 1) + Math.cos(this.time * 0.03) * 0.1,
+      phase3: Math.PI * (ratio3 % 1) + Math.sin(this.time * 0.01) * 0.1,
+      phase4: Math.PI * (ratio4 % 1) + Math.cos(this.time * 0.02) * 0.1,
       
-      // Amplitude can be adjusted based on how "pure" the frequencies are
+      // Vary decay based on complexity - more complex chords decay slower
+      // This creates more intricate patterns for complex harmonies
+      decay: 0.004 + (0.004 * (1 - complexityFactor)),
+      
+      // Dynamic amplitudes based on ratios and dissonance
       amplitude1: 1.0,
-      amplitude2: 0.8 + 0.2 * Math.sin(ratio1 * Math.PI),
-      amplitude3: 0.6 + 0.4 * Math.sin(ratio2 * Math.PI),
-      amplitude4: 0.5 + 0.5 * Math.sin(ratio3 * Math.PI)
+      amplitude2: 0.9 + 0.1 * Math.sin(ratio1 * Math.PI),
+      amplitude3: 0.75 + 0.25 * Math.sin(ratio2 * Math.PI) + 0.1 * dissonanceFactor,
+      amplitude4: 0.65 + 0.35 * Math.sin(ratio3 * Math.PI) + 0.2 * complexityFactor
     });
   }
 
