@@ -98,11 +98,17 @@ export default function ControlPanel() {
             <SelectValue placeholder="Select input device" />
           </SelectTrigger>
           <SelectContent>
-            {audioInputs.map((input) => (
-              <SelectItem key={input.deviceId} value={input.deviceId}>
-                {input.label || 'Default Microphone'}
+            {audioInputs.length > 0 ? (
+              audioInputs.map((input) => (
+                <SelectItem key={input.deviceId} value={input.deviceId || 'default-device'}>
+                  {input.label || 'Default Microphone'}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-devices">
+                No audio devices found
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
       </div>
