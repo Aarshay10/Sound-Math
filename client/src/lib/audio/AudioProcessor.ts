@@ -23,27 +23,6 @@ export class AudioProcessor {
 
   async initialize(deviceId?: string): Promise<boolean> {
     try {
-      // Create new AudioContext if not already created
-      if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-
-      // Resume the audio context (may be suspended in some browsers)
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
-
-      // Get user media with improved error handling
-      const constraints: MediaStreamConstraints = {
-        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
-        video: false,
-      };
-
-      // Release previous stream if exists
-      if (this.stream) {
-        this.stop();
-      }
-
       console.log("Requesting microphone access...");
       
       // Check if mediaDevices API is available
@@ -52,7 +31,31 @@ export class AudioProcessor {
         return false;
       }
       
+      // Try accessing user media first to ensure permissions are granted
+      // before creating audio context (important for iOS Safari)
+      const constraints: MediaStreamConstraints = {
+        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+        video: false,
+      };
+      
+      // Release previous stream if exists
+      if (this.stream) {
+        this.stop();
+      }
+      
+      // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Create new AudioContext if not already created
+      // Do this AFTER getting user media to avoid auto-suspend in some browsers
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      // Resume the audio context (may be suspended in some browsers)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
 
       // Create source and analyser nodes
       this.source = this.audioContext.createMediaStreamSource(this.stream);
@@ -67,6 +70,7 @@ export class AudioProcessor {
       this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
       this.timeData = new Float32Array(this.analyser.fftSize);
 
+      console.log("Audio successfully initialized");
       this.isInitialized = true;
       return true;
     } catch (error) {
@@ -189,7 +193,13 @@ export class AudioProcessor {
 
   // Check if audio is "active" (has significant sound)
   isAudioActive(): boolean {
-    return this.getAmplitude() > 0.01;
+    // First check if we have an initialized stream and analyzer
+    if (!this.stream || !this.analyser || !this.isInitialized) {
+      return false;
+    }
+    
+    // Lower threshold to be more sensitive to input
+    return this.getAmplitude() > 0.005;
   }
 }
 

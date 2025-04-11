@@ -413,7 +413,7 @@ export class ChordDetector {
     // If no chord is identified, just return the first note
     // Clean up the name (prefer simpler names without accidental variations)
     const noteName = notes[0]?.name || '';
-    const cleanName = noteName.includes?.('/') ? noteName.split('/')[0] : noteName;
+    const cleanName = typeof noteName === 'string' && noteName.includes('/') ? noteName.split('/')[0] : noteName;
     return { 
       name: cleanName,
       formula: "1"

@@ -24,45 +24,44 @@ export default function Home() {
   }, [initializeAudio]);
 
   return (
-    <div className="h-screen w-screen flex flex-col relative bg-dark text-light overflow-hidden">
+    <div className="h-screen w-screen overflow-hidden bg-dark text-light relative">
       {/* Background visualization */}
       <VisualizationCanvas />
       
-      {/* Header area - fixed at top */}
-      <div className="absolute top-0 left-0 right-0 z-20">
-        <Header />
-      </div>
+      {/* Header */}
+      <Header />
       
-      {/* Main content area with flexible layout */}
-      <div className="absolute inset-0 pt-16 pb-16 z-10 pointer-events-none">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 h-full p-4">
-          {/* Left panel - control panel */}
-          <div className="md:col-span-3 pointer-events-auto">
+      {/* Main content area with sidebar layout */}
+      <div className="absolute inset-0 pt-16 z-10">
+        <div className="h-full flex">
+          {/* Left panel - controls on desktop */}
+          <div className="w-72 hidden md:block h-full p-4 pointer-events-auto">
             <ControlPanel />
           </div>
           
-          {/* Middle area - intentionally empty for visualization */}
-          <div className="hidden md:block md:col-span-6">
-            {/* Space for visualization */}
-          </div>
+          {/* Center area - main visualization, keep empty */}
+          <div className="flex-grow"></div>
           
-          {/* Right panel - frequency and chord history */}
-          <div className="md:col-span-3 flex flex-col gap-4 pointer-events-auto">
+          {/* Right panel - frequency monitor and chord history */}
+          <div className="w-80 hidden md:flex flex-col p-4 pointer-events-auto">
             <FrequencyMonitor />
             <ChordHistory />
+            
+            {/* Info overlay shown inside right panel */}
+            <div className="mt-auto mb-4">
+              <InfoOverlay />
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Info overlay */}
-      <div className="absolute top-20 right-4 z-30 pointer-events-auto">
+      {/* Mobile-only info overlay */}
+      <div className="absolute bottom-16 left-0 right-0 md:hidden px-4 z-30 flex justify-center pointer-events-auto">
         <InfoOverlay />
       </div>
       
-      {/* Mobile toolbar - only visible on small screens */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 md:hidden">
-        <MobileToolbar />
-      </div>
+      {/* Mobile toolbar */}
+      <MobileToolbar />
     </div>
   );
 }
