@@ -40,7 +40,7 @@ export default function InfoOverlay() {
   if (!isVisible) return null;
   
   return (
-    <div id="info-overlay" className="fixed bottom-4 right-4 z-20 text-sm bg-dark bg-opacity-80 backdrop-blur-md rounded-lg p-4 w-64">
+    <div id="info-overlay" className="text-sm bg-dark bg-opacity-90 backdrop-blur-md rounded-lg p-4 shadow-lg max-w-xs">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-semibold">
           Current Chord: <span className="text-secondary font-mono">{detectedChord.name}</span>

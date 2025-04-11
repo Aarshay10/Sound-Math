@@ -65,14 +65,9 @@ export default function ChordHistory() {
   return (
     <div 
       ref={boxRef}
-      className={`fixed z-20 bg-dark bg-opacity-80 backdrop-blur-md rounded-lg shadow-lg transition-all duration-300 ${
+      className={`bg-dark bg-opacity-80 backdrop-blur-md rounded-lg shadow-lg transition-all duration-300 ${
         isDragging ? 'cursor-grabbing' : ''
-      } ${collapsed ? 'w-12 h-12' : 'w-60 p-4'}`}
-      style={{ 
-        left: `${position.x}px`, 
-        top: `${position.y}px`,
-        transform: collapsed ? 'scale(0.9)' : 'scale(1)'
-      }}
+      } ${collapsed ? 'h-12' : 'h-[280px] p-4'}`}
     >
       {collapsed ? (
         <button 

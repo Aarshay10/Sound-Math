@@ -71,7 +71,7 @@ export default function FrequencyMonitor() {
   const formattedFrequency = currentFrequency ? `${Math.round(currentFrequency)} Hz` : 'N/A';
   
   return (
-    <div className="fixed left-4 bottom-4 z-20 bg-dark bg-opacity-80 backdrop-blur-md rounded-lg p-4 w-80">
+    <div className="bg-dark bg-opacity-80 backdrop-blur-md rounded-lg p-4 mb-4 h-[200px]">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-semibold">Frequency Analysis</h3>
         <span className="text-xs font-mono text-secondary">{formattedFrequency}</span>
@@ -83,7 +83,7 @@ export default function FrequencyMonitor() {
       
       <div className="mt-3">
         <div className="grid grid-cols-5 gap-1 mb-1">
-          {detectedChord.notes.map((note, index) => (
+          {detectedChord.notes.slice(0, 5).map((note, index) => (
             <div key={index} className="text-center text-xs">
               <div className="font-mono text-secondary">{note.name}</div>
               <div className="text-[10px] opacity-70">{Math.round(note.frequency)}Hz</div>
