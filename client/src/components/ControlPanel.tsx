@@ -39,8 +39,8 @@ export default function ControlPanel() {
   return (
     <div 
       id="controls-panel" 
-      className={`relative z-20 fixed right-4 top-20 bg-dark bg-opacity-80 backdrop-blur-md rounded-lg shadow-lg p-4 w-64 transition-all duration-300 transform ${
-        collapsed ? 'translate-x-56' : ''
+      className={`bg-dark bg-opacity-80 backdrop-blur-md rounded-lg shadow-lg p-4 h-full overflow-auto transition-all duration-300 ${
+        collapsed ? 'opacity-30 hover:opacity-100' : ''
       }`}
     >
       <div className="flex justify-between items-center mb-4">

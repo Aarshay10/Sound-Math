@@ -25,10 +25,15 @@ export class AudioProcessor {
     try {
       // Create new AudioContext if not already created
       if (!this.audioContext) {
-        this.audioContext = new AudioContext();
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
-      // Get user media
+      // Resume the audio context (may be suspended in some browsers)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      // Get user media with improved error handling
       const constraints: MediaStreamConstraints = {
         audio: deviceId ? { deviceId: { exact: deviceId } } : true,
         video: false,
@@ -39,6 +44,14 @@ export class AudioProcessor {
         this.stop();
       }
 
+      console.log("Requesting microphone access...");
+      
+      // Check if mediaDevices API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error("Media devices API not available in this browser");
+        return false;
+      }
+      
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       // Create source and analyser nodes

@@ -343,7 +343,7 @@ export default function VisualizationCanvas() {
   }, [mode, params, colorScheme, audioData, isActive, detectedChord]);
 
   return (
-    <div id="visualization-canvas" className="absolute inset-0 bg-dark z-10">
+    <div id="visualization-canvas" className="absolute inset-0 bg-dark z-0">
       <canvas ref={mainCanvasRef} id="main-canvas" className="w-full h-full" />
     </div>
   );
