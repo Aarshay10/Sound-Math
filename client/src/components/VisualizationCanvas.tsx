@@ -40,7 +40,7 @@ export default function VisualizationCanvas() {
       accent: '#FF6B6B',
     };
 
-    // Basic harmonograph visualization function
+    // Enhanced harmonograph visualization function with audio reactivity
     const drawHarmonograph = () => {
       // Validate canvas dimensions
       if (!canvas.width || !canvas.height || !isFinite(canvas.width) || !isFinite(canvas.height)) {
@@ -49,26 +49,49 @@ export default function VisualizationCanvas() {
       
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const radius = Math.min(centerX, centerY) * 0.8;
+      const baseRadius = Math.min(centerX, centerY) * 0.6;
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // First curve
+      // Get audio data for reactivity
+      const freqData = audioData?.frequencyData || new Uint8Array(256);
+      const timeData = audioData?.timeData || new Float32Array(1024);
+      
+      // Calculate audio reactivity factors
+      const bassLevel = freqData.slice(0, 32).reduce((sum, val) => sum + val, 0) / (32 * 255);
+      const midLevel = freqData.slice(32, 128).reduce((sum, val) => sum + val, 0) / (96 * 255);
+      const trebleLevel = freqData.slice(128, 256).reduce((sum, val) => sum + val, 0) / (128 * 255);
+      const overallAmplitude = timeData.reduce((sum, val) => sum + Math.abs(val), 0) / timeData.length;
+      
+      // Dynamic radius based on audio input
+      const audioRadius = baseRadius * (1 + bassLevel * 0.5 + overallAmplitude * 0.3);
+      
+      // Calculate frequencies based on chord and audio
+      const baseFreq = detectedChord.name ? 2.0 : 2.0;
+      const audioFreqMod = 1 + (midLevel * 0.5) + (validatedParams.complexity / 100);
+      const freq1 = baseFreq * audioFreqMod;
+      const freq2 = baseFreq * 1.5 * audioFreqMod;
+      const freq3 = baseFreq * 2.2 * (1 + trebleLevel * 0.3);
+      
+      // Dynamic decay based on audio
+      const baseDecay = 0.004 + (validatedParams.decay / 100) * 0.02;
+      const audioDecay = baseDecay * (1 + overallAmplitude * 0.5);
+      
+      // Dynamic line width based on audio
+      const baseLineWidth = 2;
+      const audioLineWidth = baseLineWidth * (1 + bassLevel * 0.8 + overallAmplitude * 0.4);
+      
+      // First curve - bass responsive
       ctx.strokeStyle = colorScheme === 'default' ? colors.secondary : colors.primary;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = audioLineWidth;
       ctx.beginPath();
       
-      // Calculate frequencies based on chord
-      const baseFreq = detectedChord.name ? 2.0 : 2.0;
-      const freq1 = baseFreq * (1 + validatedParams.complexity / 100);
-      const freq2 = baseFreq * 1.5 * (1 + validatedParams.complexity / 200);
-      const decay = 0.004 + (validatedParams.decay / 100) * 0.02;
-      
-      for (let t = 0; t < 100; t += 0.1) {
-        const decayFactor = Math.exp(-decay * t);
+      for (let t = 0; t < 120; t += 0.08) {
+        const decayFactor = Math.exp(-audioDecay * t);
+        const audioMod = 1 + bassLevel * Math.sin(t * 0.5) * 0.3;
         
-        const x = centerX + radius * decayFactor * Math.sin(t * freq1 + Math.PI/4 + time);
-        const y = centerY + radius * decayFactor * Math.sin(t * freq2 + Math.PI/6 + time * 0.7);
+        const x = centerX + audioRadius * decayFactor * audioMod * Math.sin(t * freq1 + Math.PI/4 + time * (1 + bassLevel * 0.2));
+        const y = centerY + audioRadius * decayFactor * audioMod * Math.sin(t * freq2 + Math.PI/6 + time * 0.7 * (1 + bassLevel * 0.1));
         
         if (t === 0) {
           ctx.moveTo(x, y);
@@ -77,21 +100,23 @@ export default function VisualizationCanvas() {
         }
       }
       
-      // Add glow effect
-      ctx.shadowBlur = 15;
+      // Add dynamic glow effect
+      ctx.shadowBlur = 15 + bassLevel * 10;
       ctx.shadowColor = colorScheme === 'default' ? colors.secondary : colors.primary;
       ctx.stroke();
       ctx.shadowBlur = 0;
       
-      // Second curve
+      // Second curve - mid-range responsive
       ctx.beginPath();
       ctx.strokeStyle = colorScheme === 'default' ? colors.accent : colors.secondary;
+      ctx.lineWidth = audioLineWidth * 0.8;
       
-      for (let t = 0; t < 100; t += 0.1) {
-        const decayFactor = Math.exp(-decay * t);
+      for (let t = 0; t < 120; t += 0.08) {
+        const decayFactor = Math.exp(-audioDecay * t * 0.8);
+        const audioMod = 1 + midLevel * Math.sin(t * 0.3) * 0.4;
         
-        const x = centerX + radius * decayFactor * Math.sin(t * (freq1 * 1.5) + Math.PI/4 + time * 1.1);
-        const y = centerY + radius * decayFactor * Math.sin(t * (freq2 * 0.8) + Math.PI/6 + time * 0.5);
+        const x = centerX + audioRadius * decayFactor * audioMod * Math.sin(t * (freq1 * 1.5) + Math.PI/4 + time * 1.1 * (1 + midLevel * 0.15));
+        const y = centerY + audioRadius * decayFactor * audioMod * Math.sin(t * (freq2 * 0.8) + Math.PI/6 + time * 0.5 * (1 + midLevel * 0.1));
         
         if (t === 0) {
           ctx.moveTo(x, y);
@@ -100,8 +125,32 @@ export default function VisualizationCanvas() {
         }
       }
       
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 12 + midLevel * 8;
       ctx.shadowColor = colorScheme === 'default' ? colors.accent : colors.secondary;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      // Third curve - treble responsive
+      ctx.beginPath();
+      ctx.strokeStyle = colorScheme === 'default' ? colors.primary : colors.accent;
+      ctx.lineWidth = audioLineWidth * 0.6;
+      
+      for (let t = 0; t < 100; t += 0.1) {
+        const decayFactor = Math.exp(-audioDecay * t * 1.2);
+        const audioMod = 1 + trebleLevel * Math.sin(t * 0.8) * 0.2;
+        
+        const x = centerX + audioRadius * decayFactor * audioMod * Math.sin(t * freq3 + Math.PI/3 + time * 1.3 * (1 + trebleLevel * 0.1));
+        const y = centerY + audioRadius * decayFactor * audioMod * Math.sin(t * (freq3 * 0.7) + Math.PI/5 + time * 0.9 * (1 + trebleLevel * 0.05));
+        
+        if (t === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      ctx.shadowBlur = 8 + trebleLevel * 6;
+      ctx.shadowColor = colorScheme === 'default' ? colors.primary : colors.accent;
       ctx.stroke();
       ctx.shadowBlur = 0;
     };
