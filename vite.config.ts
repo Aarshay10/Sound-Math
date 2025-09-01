@@ -4,8 +4,8 @@ import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// Set base path for GitHub Pages deployment
-const base = "/Sound-Math/";
+// Set base path for GitHub Pages deployment (only in production)
+const base = process.env.NODE_ENV === "production" ? "/Sound-Math/" : "/";
 
 export default defineConfig({
   base,
