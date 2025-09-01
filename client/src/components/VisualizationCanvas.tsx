@@ -14,6 +14,13 @@ export default function VisualizationCanvas() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Validate params to prevent invalid calculations
+    const validatedParams = {
+      complexity: isFinite(params.complexity) ? Math.max(0, Math.min(100, params.complexity)) : 50,
+      sensitivity: isFinite(params.sensitivity) ? Math.max(0, Math.min(100, params.sensitivity)) : 50,
+      decay: isFinite(params.decay) ? Math.max(0, Math.min(100, params.decay)) : 50
+    };
+
     // Set canvas to full size
     const resize = () => {
       canvas.width = canvas.offsetWidth * window.devicePixelRatio;
@@ -35,6 +42,11 @@ export default function VisualizationCanvas() {
 
     // Basic harmonograph visualization function
     const drawHarmonograph = () => {
+      // Validate canvas dimensions
+      if (!canvas.width || !canvas.height || !isFinite(canvas.width) || !isFinite(canvas.height)) {
+        return; // Exit if canvas dimensions are invalid
+      }
+      
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
       const radius = Math.min(centerX, centerY) * 0.8;
@@ -48,9 +60,9 @@ export default function VisualizationCanvas() {
       
       // Calculate frequencies based on chord
       const baseFreq = detectedChord.name ? 2.0 : 2.0;
-      const freq1 = baseFreq * (1 + params.complexity / 100);
-      const freq2 = baseFreq * 1.5 * (1 + params.complexity / 200);
-      const decay = 0.004 + (params.decay / 100) * 0.02;
+      const freq1 = baseFreq * (1 + validatedParams.complexity / 100);
+      const freq2 = baseFreq * 1.5 * (1 + validatedParams.complexity / 200);
+      const decay = 0.004 + (validatedParams.decay / 100) * 0.02;
       
       for (let t = 0; t < 100; t += 0.1) {
         const decayFactor = Math.exp(-decay * t);
@@ -96,9 +108,17 @@ export default function VisualizationCanvas() {
 
     // Wave visualization
     const drawWaveform = () => {
+      // Validate canvas dimensions
+      if (!canvas.width || !canvas.height || !isFinite(canvas.width) || !isFinite(canvas.height)) {
+        return; // Exit if canvas dimensions are invalid
+      }
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const waveData = audioData.timeData || new Float32Array(1024);
+      const waveData = audioData?.timeData || new Float32Array(1024);
+      if (!waveData || waveData.length === 0) {
+        return; // Exit if no time data
+      }
       
       ctx.strokeStyle = colorScheme === 'default' ? colors.secondary : colors.primary;
       ctx.lineWidth = 2;
@@ -108,7 +128,7 @@ export default function VisualizationCanvas() {
       let x = 0;
       
       for (let i = 0; i < waveData.length; i++) {
-        const v = waveData[i] * 0.5 * (params.sensitivity / 100 * 3);
+        const v = waveData[i] * 0.5 * (validatedParams.sensitivity / 100 * 3);
         const y = (canvas.height / 2) + (v * canvas.height / 2);
         
         if (i === 0) {
@@ -136,28 +156,44 @@ export default function VisualizationCanvas() {
     
     // Particle visualization
     const drawParticles = () => {
+      // Validate canvas dimensions
+      if (!canvas.width || !canvas.height || !isFinite(canvas.width) || !isFinite(canvas.height)) {
+        return; // Exit if canvas dimensions are invalid
+      }
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const freqData = audioData.frequencyData || new Uint8Array(1024);
+      const freqData = audioData?.frequencyData || new Uint8Array(1024);
+      if (!freqData || freqData.length === 0) {
+        return; // Exit if no frequency data
+      }
       const particles: Particle[] = [];
       
       // Reduce particle count to make it less cluttered
-      const particleCount = 20 + Math.floor(params.complexity / 2);
+      const particleCount = 20 + Math.floor(validatedParams.complexity / 2);
       
       // Get chord frequency data for more dynamic movement
-      const chordFrequencies = detectedChord.frequencies || [];
+      const chordFrequencies = detectedChord?.frequencies || [];
+      if (!Array.isArray(chordFrequencies)) {
+        return; // Exit if chord frequencies are invalid
+      }
       
       // Create particles
       for (let i = 0; i < particleCount; i++) {
         // Use specific frequency ranges for better visual mapping
         const freqIndex = Math.floor(i / particleCount * (freqData.length / 2));
         
+        // Validate frequency data
+        if (!freqData[freqIndex] || !isFinite(freqData[freqIndex])) {
+          continue; // Skip this particle if frequency data is invalid
+        }
+        
         // More responsive amplitude calculation
         const amplitude = Math.pow(freqData[freqIndex] / 255.0, 1.2); // Non-linear response
         
         // Larger particle sizes
         const baseSizeFactor = 3.5; // Increased base size
-        const sizeFactor = 15 * (params.sensitivity / 100); // More sensitive to controls
+        const sizeFactor = 15 * (validatedParams.sensitivity / 100); // More sensitive to controls
         const size = baseSizeFactor + (amplitude * sizeFactor);
         
         // More dynamic movements based on chord frequencies and time
@@ -166,9 +202,12 @@ export default function VisualizationCanvas() {
         
         // If we have chord data, use it to influence the particle behavior
         if (chordFrequencies.length > 0) {
-          const freqInfluence = chordFrequencies[i % chordFrequencies.length] / 440; // A4 reference
-          orbitSize = 100 + amplitude * 200 * freqInfluence;
-          speedFactor = 0.8 + (freqInfluence % 1) * 0.8;
+          const chordFreq = chordFrequencies[i % chordFrequencies.length];
+          if (chordFreq && isFinite(chordFreq) && chordFreq > 0) {
+            const freqInfluence = chordFreq / 440; // A4 reference
+            orbitSize = 100 + amplitude * 200 * freqInfluence;
+            speedFactor = 0.8 + (freqInfluence % 1) * 0.8;
+          }
         }
         
         // Calculate position with more organic movement
@@ -178,7 +217,10 @@ export default function VisualizationCanvas() {
         const x = canvas.width / 2 + Math.cos(angle) * (orbitSize + wobble);
         const y = canvas.height / 2 + Math.sin(angle) * (orbitSize + wobble);
         
-        particles.push({ x, y, size, amplitude, speedFactor });
+        // Validate calculated values before adding particle
+        if (isFinite(x) && isFinite(y) && isFinite(size) && size > 0) {
+          particles.push({ x, y, size, amplitude, speedFactor });
+        }
       }
       
       // Draw connections first (behind particles for better layering)
@@ -211,6 +253,12 @@ export default function VisualizationCanvas() {
           
         // Draw connections to nearest particles
         for (const nearby of nearbyParticles) {
+          // Validate particle coordinates before drawing
+          if (!isFinite(particles[i].x) || !isFinite(particles[i].y) || 
+              !isFinite(nearby.particle.x) || !isFinite(nearby.particle.y)) {
+            continue; // Skip invalid connections
+          }
+          
           const opacity = 1 - (nearby.distance / connectionDistance);
           ctx.globalAlpha = opacity * 0.7; // Slightly more transparent
           ctx.beginPath();
@@ -228,6 +276,11 @@ export default function VisualizationCanvas() {
       
       // Draw particles
       particles.forEach((particle) => {
+        // Validate particle data to prevent NaN/Infinity errors
+        if (!isFinite(particle.x) || !isFinite(particle.y) || !isFinite(particle.size) || particle.size <= 0) {
+          return; // Skip invalid particles
+        }
+        
         // Add glow effect
         ctx.shadowBlur = 15;
         ctx.shadowColor = colorScheme === 'default' ? colors.secondary : colors.primary;
@@ -261,6 +314,11 @@ export default function VisualizationCanvas() {
 
     // Basic fractal visualization
     const drawFractal = () => {
+      // Validate canvas dimensions
+      if (!canvas.width || !canvas.height || !isFinite(canvas.width) || !isFinite(canvas.height)) {
+        return; // Exit if canvas dimensions are invalid
+      }
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       const centerX = canvas.width / 2;
@@ -290,8 +348,8 @@ export default function VisualizationCanvas() {
         ctx.stroke();
         
         // Calculate branch factor based on complexity
-        const branchFactor = 0.65 + (params.complexity / 100) * 0.1;
-        const angleOffset = Math.PI / 6 + (params.sensitivity / 100) * (Math.PI / 12);
+        const branchFactor = 0.65 + (validatedParams.complexity / 100) * 0.1;
+        const angleOffset = Math.PI / 6 + (validatedParams.sensitivity / 100) * (Math.PI / 12);
         
         // Recursive calls for branches
         drawBranch(endX, endY, length * branchFactor, angle - angleOffset, depth - 1);
@@ -299,17 +357,25 @@ export default function VisualizationCanvas() {
       };
       
       // Start the fractal
-      const maxDepth = 9 + Math.floor(params.complexity / 20);
+      const maxDepth = 9 + Math.floor(validatedParams.complexity / 20);
       drawBranch(centerX, centerY + maxSize, maxSize, -Math.PI / 2, maxDepth);
     };
 
     // Animation loop
     const animate = () => {
+      // Validate time variable to prevent it from becoming infinite
+      if (!isFinite(time)) {
+        time = 0;
+      }
+      
       time += 0.01;
       
       // Adjust animation speed based on activity
       if (isActive) {
-        time += 0.01 * (params.sensitivity / 50);
+        const timeIncrement = 0.01 * (validatedParams.sensitivity / 50);
+        if (isFinite(timeIncrement)) {
+          time += timeIncrement;
+        }
       }
       
       // Choose visualization based on mode

@@ -4,7 +4,13 @@ import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+// In GitHub Actions, set base to the repository name for GitHub Pages
+const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1];
+const isCI = process.env.GITHUB_ACTIONS === "true";
+const base = isCI && repoName ? `/${repoName}/` : "/";
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     runtimeErrorOverlay(),
